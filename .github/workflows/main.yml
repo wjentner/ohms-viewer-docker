@@ -25,6 +25,8 @@ jobs:
         run: |
           OHMS_VERSION=$(git ls-remote --tags --sort=version:refname $OHMS_VIEWER_REPO | awk 'END{split($2,a,"/"); print substr(a[3],2);}')
 
+          echo "Latest OHMS Viewer version: ${OHMS_VERSION}"
+
           echo "ohms_version=${OHMS_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Check if new Docker image should be built
@@ -37,6 +39,8 @@ jobs:
           if ! "$IS_NEW_VERSION"; then
             docker buildx imagetools inspect $DOCKER_REPO:${{ steps.repo.outputs.ohms_version }} > /dev/null || IS_NEW_VERSION=true
           fi
+
+          echo "Is new version: ${IS_NEW_VERSION}"
 
           echo "is_new_version=${IS_NEW_VERSION}" >> $GITHUB_OUTPUT
 
@@ -56,4 +60,4 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push the Docker image
-        run: docker build --push -t "${DOCKER_REPO}:${{ needs.setup.outputs.ohms_version }}" -t "${DOCKER_REPO}:latest"
+        run: docker build --push -t "${DOCKER_REPO}:${{ needs.setup.outputs.ohms_version }}" -t "${DOCKER_REPO}:latest" .
