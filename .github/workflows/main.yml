@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  OHMS_VIEWER_REPO: https://github.com/uklibraries/ohms-viewer
+  DOCKER_REPO: wjentner/ohms-viewer
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      ohms_version: ${{ steps.repo.outputs.ohms_version }}
+      is_new_version: ${{ steps.check.outputs.is_new_version }}
+    steps:
+      - name: Get the latest version tag from ohms-viewer
+        id: repo
+        run: |
+          OHMS_VERSION=$(git ls-remote --tags --sort=version:refname $OHMS_VIEWER_REPO | awk 'END{split($2,a,"/"); print substr(a[3],2);}')
+
+          echo "ohms_version=${OHMS_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Check if new Docker image should be built
+        id: check
+        run: |
+          # if there is a push/pull request assume that dockerfile changed and therefore build and push
+          IS_NEW_VERSION=${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+
+          # if it is from the cronjob then check if the current image already exists
+          if ! "$IS_NEW_VERSION"; then
+            docker buildx imagetools inspect $DOCKER_REPO:${{ steps.repo.outputs.ohms_version }} > /dev/null || IS_NEW_VERSION=true
+          fi
+
+          echo "is_new_version=${IS_NEW_VERSION}" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    needs: setup
+    if: ${{ needs.setup.outputs.is_new_version == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push the Docker image
+        run: docker build --push -t "${DOCKER_REPO}:${{ needs.setup.outputs.ohms_version }}" -t "${DOCKER_REPO}:latest"
