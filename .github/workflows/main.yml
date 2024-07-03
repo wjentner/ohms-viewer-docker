@@ -60,4 +60,4 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push the Docker image
-        run: docker build --push -t "${DOCKER_REPO}:${{ needs.setup.outputs.ohms_version }}" -t "${DOCKER_REPO}:latest" .
+        run: docker build --push --build-arg=OHMS_VERSION=${{ needs.setup.outputs.ohms_version }} -t "${DOCKER_REPO}:${{ needs.setup.outputs.ohms_version }}" -t "${DOCKER_REPO}:latest" .
