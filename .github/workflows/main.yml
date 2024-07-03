@@ -23,7 +23,7 @@ jobs:
       - name: Get the latest version tag from ohms-viewer
         id: repo
         run: |
-          OHMS_VERSION=$(git ls-remote --tags --sort=version:refname $OHMS_VIEWER_REPO | awk 'END{split($2,a,"/"); print substr(a[3],2);}')
+          OHMS_VERSION=$(git ls-remote --tags --sort=version:refname $OHMS_VIEWER_REPO | awk 'END{split($2,a,"/"); sub(/v/, "", a[3]); print a[3]}')
 
           echo "Latest OHMS Viewer version: ${OHMS_VERSION}"
 
